@@ -1,6 +1,6 @@
 # Handoff: start here
 
-For any AI agent continuing this project with no earlier context. Last updated 2026-11-02, at the end of M4.
+For any AI agent continuing this project with no earlier context. Last updated 2026-11-02, at the end of M5.
 
 Update this file whenever a milestone changes state or a decision is made.
 
@@ -12,11 +12,11 @@ Update this file whenever a milestone changes state or a decision is made.
 | M1 | Fake data, mock MCP servers, tool tests | Done |
 | M2 | 30 tasks, checkers, oracle | Done |
 | M3 | Condition A, runner, cache, logging | Done |
-| M4 | Condition C, sandbox | Done, **awaiting human review** |
-| M5 | Condition B, dry run of all three | Not started |
-| M6 | Full run, analysis, figures | Not started, needs explicit cost approval |
+| M4 | Condition C, sandbox | Done |
+| M5 | Condition B, dry run of all three | Done |
+| M6 | Full run, analysis, figures | Not started. **Waiting on the human's decision below** |
 
-All 311 tests passed at the end of M4. Run them with `uv run pytest -q`; this takes about 4 minutes and needs
+All 328 tests pass. Run them with `uv run pytest -q`; this takes about 6 minutes and needs
 Docker. **Nothing has been committed.** The git repository has no commits, and the human has not asked for any.
 
 ## Read these, in order
@@ -28,7 +28,7 @@ Docker. **Nothing has been committed.** The git repository has no commits, and t
 
 ## Rules that are easy to break
 
-- **Stop after each milestone** for human review. Do not start M5 until the human approves M4.
+- **Stop after each milestone** for human review. Do not start the full run until the human approves its cost.
 - **Model API calls only through `runner.py`**, as a dry run or a full run the human approved. Tests use a fake client.
 - **A full run needs explicit human approval of the cost.** The runner enforces this with `--approved`. Never pass
   that flag on your own judgment.
@@ -36,34 +36,50 @@ Docker. **Nothing has been committed.** The git repository has no commits, and t
 - **Do not change tasks, tools, or prompts to make a condition pass.**
 - **Report results as measured**, including ones that contradict the source post.
 
-## Next step: M5, once the human approves
+## Where the conversation stopped
 
-1. Write `agents/tool_search.py` with a `ToolSearchExposure(Exposure)`, following `agents/direct.py`:
-   - The model starts with only `search_tools(query)`.
-   - Search is deterministic BM25 (`rank-bm25` is installed) over tool name and description, returning the top 5.
-   - The result lists names and one-line summaries. Full schemas join `tools()` from the next request and stay loaded.
-   - Results are returned verbatim, as in condition A.
-   - Calling a tool that is not loaded returns a clear error.
-2. Register it in `EXPOSURES` in `runner.py` as `"B"`.
-3. Test deterministic ranking, schema persistence, and the not-loaded error. Confirm the system prompt core is
-   byte-identical across conditions (`SYSTEM_CORE` in `agents/common.py`).
-4. Dry-run, capped, and report per-run numbers:
-   ```
-   uv run python runner.py --dry-run --conditions B --models glm-5.3-flash --tasks L01 --max-requests 30
-   uv run python runner.py --dry-run --conditions A --models kimi-k2.7-code --tasks L01 --max-requests 30
-   ```
-   The Kimi run under condition A is required: the current cost estimate comes from GLM alone. Also try at least one
-   `simple` task under C, because none has been run yet and that is where code mode may lose.
-5. Build a blended, per-category estimate for the full run and **wait for approval**. See "Traps" for why the runner's
-   printed extrapolation is not enough.
+No run is in progress. The human has **not approved any full or pilot run**. They raised concern about token use, and
+said their current 5-hour usage window is nearly used up, so nothing should run for now.
 
-## Before the full run (M6)
+Recommended next step, proposed but not yet accepted: **a pilot on `glm-5.3-flash`, 1 trial, all 30 tasks and all 3
+conditions**, about 90 runs, 30M tokens, and $2.50 of plan allowance, started on a fresh usage window. Pilot rows count
+as trial 1, so continuing later reuses them. The options, including using an OpenAI key, are in
+[findings/05-cost-options.md](findings/05-cost-options.md).
 
-- Fix `results/run_meta.json`: every invocation overwrites it, including dry runs, and `temperature_dropped_for` only
-  covers the current process.
-- Raise the Opencode Go usage question with the human (see "Open items").
-- Run in batches with `--max-requests`, and stop and report if any `internal` error appears.
-- `analysis/report.py` does not exist yet. Its requirements are in spec section 8 and PLAN.md M6.
+## Before any run
+
+Ask the human for all of these:
+
+1. Approval of the pilot or another option.
+2. Confirmation that their usage window has reset. The limits are per model according to the docs, so the console should
+   show each model's state.
+3. Confirmation that pay-as-you-go fallback is off.
+4. Acceptance of the Opencode Go usage risk (see "Open items").
+
+Then finish this prep, which makes no model API calls. The human has so far asked only for the first item:
+
+- [x] `results/run_meta.json` describes the actual run. Dry runs use `results/dry_run_meta.json`.
+- [ ] Make the runner stop cleanly at a usage limit. How the API responds at a limit is unknown. If it returns errors,
+      every remaining run could fail fast and be logged as `api_error`. Those can be rerun with `--retry-errors`.
+- [ ] Write `analysis/report.py` (spec section 8, PLAN.md M6) and test it on fake results. Load the `dataviz` skill before charting.
+
+## Pilot command, only after approval
+
+```
+uv run python runner.py --approved --models glm-5.3-flash --conditions A,B,C --tasks all --trials 1 --max-requests 300
+```
+
+Rerun the same command to continue each batch. A full 3-trial run later uses the same command with `--trials 3`.
+
+During the run:
+
+- Stop and report if any `internal` error appears.
+- Check the first `context_overflow` message on stderr. The Kimi dry-run overflow was classified by a broad text
+  pattern in `llm.py` before messages were reported, so it is unproven.
+- Check `environment_changed` in `results/run_meta.json`. It should stay `false` within a run set.
+- Expect usage windows to interrupt Kimi: its 5-hour allowance is $12 on the Go plan.
+
+A git commit before the pilot would make `git_commit` in the metadata useful, but commit only if the human asks.
 
 ## Project map
 
@@ -72,7 +88,7 @@ Docker. **Nothing has been committed.** The git repository has no commits, and t
 | `runner.py` | CLI and the only code that may call the model API |
 | `llm.py` | Client, on-disk cache, retries, request cap, error classification |
 | `agents/common.py` | Shared agent loop, `SYSTEM_CORE`, the `Exposure` base class |
-| `agents/direct.py`, `agents/code_mode.py` | Conditions A and C |
+| `agents/direct.py`, `agents/tool_search.py`, `agents/code_mode.py` | Conditions A, B and C |
 | `servers/{sheets,docs,crm}.py` | Mock MCP servers, 32 tools |
 | `servers/client.py` | The one MCP client layer that every condition and the oracle use |
 | `servers/state.py` | Data paths, per-run CRM state, `FAKE_TODAY` |
@@ -81,7 +97,8 @@ Docker. **Nothing has been committed.** The git repository has no commits, and t
 | `data/generate.py` | Seeded data generator. Its output is gitignored |
 | `tasks/build_tasks.py` | Computes expected answers and writes `tasks/tasks.jsonl` |
 | `tasks/checkers.py`, `tasks/oracle.py` | Programmatic checkers and scripted solutions |
-| `results/dry_runs.jsonl` | Dry-run log, gitignored. Numbers are copied to `findings/` |
+| `results/dry_runs.jsonl`, `results/dry_run_meta.json` | Dry-run log and metadata. The log is gitignored, and its numbers are copied to `findings/` |
+| `results/runs.jsonl`, `results/run_meta.json` | Real run log and metadata. Neither exists until a run is approved |
 
 ## Setup and commands
 
@@ -120,4 +137,6 @@ uv run pytest -q
   run fits the plan's limits. Details are in [findings/02-endpoint-and-models.md](findings/02-endpoint-and-models.md).
 - **Base URL:** `.env` uses `opencode.ai/zen/go/v1`, while the docs list `opencode.ai/inference/go/openai/v1`. The
   current one works, so it was left alone.
-- **M4 review:** the fairness decisions awaiting review are in [findings/03-decisions.md](findings/03-decisions.md).
+- **Run approval:** pending, see "Where the conversation stopped". The fairness decisions are in
+  [findings/03-decisions.md](findings/03-decisions.md).
+- **`M3_FEEDBACK.md`:** the human may edit this file to pass notes from a parallel session, so check it for updates.
