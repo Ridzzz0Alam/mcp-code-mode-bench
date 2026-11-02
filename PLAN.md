@@ -18,8 +18,8 @@ If they conflict, the spec wins, except for the deviations listed in section 2.
 | M2 | 30 tasks, checkers, oracle solutions | Done, awaiting review |
 | M3 | Condition A, runner, cache, logging, dry run | Done. Models: `glm-5.3-flash`, `kimi-k2.7-code` |
 | M4 | Condition C, sandbox, dry run | Done |
-| M5 | Condition B, dry run of all three | In progress |
-| M6 | Full run (needs cost approval), analysis, figures | Not started |
+| M5 | Condition B, dry run of all three | Done |
+| M6 | Full run (needs cost approval), analysis, figures | Not started, see HANDOFF.md |
 
 M0 is small enough to do together with M1, with one review covering both.
 
@@ -216,8 +216,9 @@ runner.py --models m1,m2 --conditions A,B,C --tasks all --trials 3 \
 - `--dry-run` writes to `results/dry_runs.jsonl`, not `runs.jsonl`, so it cannot affect the resume logic.
   It still uses the shared cache only under a `dryrun` trial value. It prints tokens per condition, total
   requests, and the extrapolation to 540 runs.
-- Write `results/run_meta.json` with package versions, model IDs, Docker image digest, git commit,
-  data seed, and start time.
+- Write `results/run_meta.json` with package versions, model IDs, Docker image ID, git commit, data seed, and
+  start time. Each invocation is appended, so batches keep their history, and `environment_changed` flags any drift.
+  Dry runs use `results/dry_run_meta.json`.
 
 ### Log schema
 
@@ -328,10 +329,8 @@ Only after the human approves the cost:
 
 ## 6. Pitfalls to watch
 
-- **`run_meta.json` before M6:** every invocation overwrites it, including dry runs, and
-  `temperature_dropped_for` only covers the current process. Fix this before the full run so the file
-  describes that run. `kimi-k2.7-code` rejects temperature 0 and runs at its default, while `glm-5.3-flash`
-  accepts it, so state that in the report and compare conditions within each model.
+- **Temperature:** `kimi-k2.7-code` rejects temperature 0 and runs at its default, while `glm-5.3-flash` accepts it,
+  so state that in the report and compare conditions within each model.
 - **Cached tokens:** `kimi-k2.7-code` reported no `cached_input_tokens` on S05, so caching may not be
   comparable between the two models.
 - **Trial variance:** even at temperature 0, providers may vary. Report what is measured.
