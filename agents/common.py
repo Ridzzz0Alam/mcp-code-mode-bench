@@ -76,8 +76,9 @@ async def run_agent(llm: LLM, model: str, trial: int | str, exposure: Exposure, 
     while outcome.model_turns < MAX_TURNS:
         try:
             response = await llm.complete(model, trial, messages, exposure.tools(), session_id)
-        except ContextOverflow:
+        except ContextOverflow as failure:
             outcome.stop_reason = outcome.error = "context_overflow"
+            outcome.error_detail = str(failure)
             return outcome
         except OversizedRequestFailure as failure:
             outcome.stop_reason = outcome.error = "oversized_request"
