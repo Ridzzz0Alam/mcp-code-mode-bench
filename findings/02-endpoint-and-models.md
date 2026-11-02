@@ -44,10 +44,9 @@ the spec. With Global enabled, DeepSeek may now work, but this has not been test
 
 ## Is this benchmark an allowed use?
 
-Unresolved, and the human's call before a full run. The docs say Go is "designed for OpenCode and other coding agents
-that produce similar types of requests" and that "traffic is monitored for abuse". They neither allow nor ban custom
-scripts, and they have no terms on benchmarking. They ask clients to send typical coding agent traffic, identify
-themselves with their own user agent, and send a stable session ID.
+Neither the docs nor the Terms of Use explicitly allow or ban it. See
+[06-usage-policy.md](06-usage-policy.md) for the clause-by-clause reading and the open questions for the human.
 
-The runner identifies itself as `mcp-code-mode-bench/0.1` and does not imitate another client. Whether 540 runs with
-some very large requests count as typical traffic is the open question.
+The runner identifies itself as `mcp-code-mode-bench/0.1`, sends a stable `x-opencode-session`, and uses one account at
+concurrency 2. The residual grey area is the Terms' clauses on programmatic extraction, unattended processes, and
+unreasonable load; the practical constraint is the per-model dollar allowance, not a permission rule.

@@ -17,7 +17,7 @@ Update this file whenever a milestone changes state or a decision is made.
 | M6 | Full run, analysis, figures | Not started. **Waiting on the human's decision below** |
 
 All 328 tests pass. Run them with `uv run pytest -q`; this takes about 6 minutes and needs
-Docker. **Nothing has been committed.** The git repository has no commits, and the human has not asked for any.
+Docker. Commit only when the human asks.
 
 ## Read these, in order
 
@@ -38,13 +38,15 @@ Docker. **Nothing has been committed.** The git repository has no commits, and t
 
 ## Where the conversation stopped
 
-No run is in progress. The human has **not approved any full or pilot run**. They raised concern about token use, and
-said their current 5-hour usage window is nearly used up, so nothing should run for now.
+**Paused by the human on 2026-11-02 until their usage window resets.** No run is in progress. The human has **not
+approved any full or pilot run**. They said their current 5-hour usage window is 95% used, so nothing should run for now.
+They intend to try the GLM pilot after the reset, but still need to confirm the items under "Before any run". They also
+considered a local LLM; it was advised against because the laptop cannot hold the large-data contexts.
 
 Recommended next step, proposed but not yet accepted: **a pilot on `glm-5.3-flash`, 1 trial, all 30 tasks and all 3
 conditions**, about 90 runs, 30M tokens, and $2.50 of plan allowance, started on a fresh usage window. Pilot rows count
-as trial 1, so continuing later reuses them. The options, including using an OpenAI key, are in
-[findings/05-cost-options.md](findings/05-cost-options.md).
+as trial 1, so continuing later reuses them. The options are in
+[findings/05-cost-options.md](findings/05-cost-options.md). The human has ruled out using an OpenAI API key.
 
 ## Before any run
 
@@ -53,7 +55,7 @@ Ask the human for all of these:
 1. Approval of the pilot or another option.
 2. Confirmation that their usage window has reset. The limits are per model according to the docs, so the console should
    show each model's state.
-3. Confirmation that pay-as-you-go fallback is off.
+3. ~~Confirmation that pay-as-you-go fallback is off.~~ Confirmed by the human on 2026-11-02: it is off and will stay off.
 4. Acceptance of the Opencode Go usage risk (see "Open items").
 
 Then finish this prep, which makes no model API calls. The human has so far asked only for the first item:
