@@ -40,6 +40,7 @@ USER_AGENT = "mcp-code-mode-bench/0.1"
 DRY_RUN_TASK = "L01"
 FULL_RUNS_PER_CONDITION = 2 * 30 * 3
 DRY_RUN_MAX_REQUESTS = 60
+ENVIRONMENT_FIELDS = ["sandbox_image", "packages", "python", "git_commit"]
 PACKAGES = ["openai", "mcp", "pydantic", "pandas", "matplotlib", "rank-bm25"]
 EXPOSURES: dict[str, Callable[[ToolClient], Exposure]] = {"A": DirectExposure, "B": ToolSearchExposure, "C": CodeExposure}
 
@@ -53,6 +54,7 @@ class Settings:
     results_dir: Path
     log_name: str
     retry_errors: bool = False
+    meta_name: str = "run_meta.json"
 
 
 def _redact(text: str) -> str:
@@ -150,22 +152,43 @@ async def execute(settings: Settings, llm: LLM, base: Path) -> dict[str, int | b
     return summary
 
 
-def write_meta(settings: Settings, llm: LLM, started: str) -> None:
+def merge_meta(previous: dict[str, Any], invocation: dict[str, Any], temperature_dropped: set[str]) -> dict[str, Any]:
+    """Combine this invocation with earlier ones, so resuming in batches loses no history."""
+    invocations = [*previous.get("invocations", []), invocation]
+    environments = {json.dumps({key: run[key] for key in ENVIRONMENT_FIELDS}, sort_keys=True) for run in invocations}
+    return {
+        **{key: invocation[key] for key in ENVIRONMENT_FIELDS},
+        "data_seed": SEED,
+        "first_started": invocations[0]["started"],
+        "models": list(dict.fromkeys(model for run in invocations for model in run["models"])),
+        "conditions": list(dict.fromkeys(condition for run in invocations for condition in run["conditions"])),
+        "temperature_dropped_for": sorted(set(previous.get("temperature_dropped_for", [])) | temperature_dropped),
+        # True means the runs did not all use the same code, packages or sandbox image.
+        "environment_changed": len(environments) > 1,
+        "invocations": invocations,
+    }
+
+
+def write_meta(settings: Settings, llm: LLM, started: str, summary: dict[str, int | bool]) -> None:
     revision = subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=ROOT, capture_output=True, text=True)
     commit = revision.stdout.strip() if revision.returncode == 0 else None
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", IMAGE], capture_output=True, text=True).stdout.strip() if "C" in settings.conditions else None
-    meta = {
-        "sandbox_image": image or None,
+    invocation = {
         "started": started,
+        "finished": datetime.now(timezone.utc).isoformat(),
         "models": settings.models,
         "conditions": settings.conditions,
+        "http_requests": llm.requests_sent,
+        "rows_written": summary["written"],
+        "cap_reached": summary["cap_reached"],
+        "sandbox_image": image or None,
         "packages": {name: importlib.metadata.version(name) for name in PACKAGES},
         "python": sys.version.split()[0],
-        "data_seed": SEED,
         "git_commit": commit,
-        "temperature_dropped_for": sorted(llm.temperature_dropped),
     }
-    (settings.results_dir / "run_meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    path = settings.results_dir / settings.meta_name
+    previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    path.write_text(json.dumps(merge_meta(previous, invocation, llm.temperature_dropped), indent=2) + "\n", encoding="utf-8")
 
 
 def _price(name: str) -> float | None:
@@ -238,7 +261,7 @@ def settings_from_args(args: argparse.Namespace, results_dir: Path) -> Settings:
         chosen = [t for t in tasks if t["id"] == task_id]
         if not chosen:
             sys.exit(f"A dry run takes one task ID, not '{task_id}'")
-        return Settings(models[:1], conditions, chosen, ["dryrun"], results_dir, "dry_runs.jsonl", retry_errors=True)
+        return Settings(models[:1], conditions, chosen, ["dryrun"], results_dir, "dry_runs.jsonl", retry_errors=True, meta_name="dry_run_meta.json")
     if not args.approved:
         sys.exit("A full run needs --approved, after the human has confirmed the dry-run cost.")
     if args.tasks != "all":
@@ -257,7 +280,7 @@ async def amain(args: argparse.Namespace, client: Any, results_dir: Path, cache_
     llm = LLM(client, cache_dir, max_requests)
     started = datetime.now(timezone.utc).isoformat()
     summary = await execute(settings, llm, base)
-    write_meta(settings, llm, started)
+    write_meta(settings, llm, started, summary)
     print(f"Written {summary['written']}, skipped {summary['skipped']}, HTTP requests {llm.requests_sent}, internal errors {summary['internal_errors']}.")
     if summary["cap_reached"]:
         print(f"Stopped at the limit of {max_requests} requests. Rerun to resume; unfinished runs replay from the cache.")
