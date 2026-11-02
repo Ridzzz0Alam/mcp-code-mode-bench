@@ -26,6 +26,7 @@ from openai import AsyncOpenAI
 from agents.code_mode import CodeExposure
 from agents.common import Exposure, run_agent, usage_totals
 from agents.direct import DirectExposure
+from agents.tool_search import ToolSearchExposure
 from data.generate import SEED
 from llm import LLM, REQUEST_TIMEOUT_S, RequestCapReached
 from sandbox.executor import IMAGE
@@ -40,7 +41,7 @@ DRY_RUN_TASK = "L01"
 FULL_RUNS_PER_CONDITION = 2 * 30 * 3
 DRY_RUN_MAX_REQUESTS = 60
 PACKAGES = ["openai", "mcp", "pydantic", "pandas", "matplotlib", "rank-bm25"]
-EXPOSURES: dict[str, Callable[[ToolClient], Exposure]] = {"A": DirectExposure, "C": CodeExposure}
+EXPOSURES: dict[str, Callable[[ToolClient], Exposure]] = {"A": DirectExposure, "B": ToolSearchExposure, "C": CodeExposure}
 
 
 @dataclass
