@@ -24,11 +24,12 @@ Kept so that nobody reintroduces them, and because several would have invalidate
 | M3 | Oversized requests retried for 5 minutes each | kimi-k3 dry run and M3_FEEDBACK.md | One attempt, then `oversized_request` |
 | M4 | Base image tag was unpinned | Review | Pinned by digest |
 | M4 | Async test fixture crossed tasks and broke the MCP client | Test errors | One task owns the client's lifetime |
+| M5 | `context_overflow` message was not saved, so Kimi's dry-run overflow is unproven | Reading the results | Message now reported on stderr. The pattern in `llm.py` is broad, so check the first one in M6 |
+| M5 | `run_meta.json` was overwritten by every invocation, including dry runs | Reviewing the file | Dry runs have their own file, and each invocation is appended |
 
 ## Not yet fixed
 
-- `results/run_meta.json` is overwritten by every invocation, and `temperature_dropped_for` covers only the current
-  process. Fix before M6.
+- The runner does not stop cleanly at a usage limit, because how the API responds at one is unknown.
 - The runner's printed dry-run extrapolation assumes every task resembles the one that ran. Use a per-category estimate.
 
 ## Security incident

@@ -42,7 +42,13 @@ The deviations from the spec (D1 to D7) are in [PLAN.md](../PLAN.md), section 2.
 - **`wall_time_s` excludes rate-limit waits and server startup,** but includes container startup for C. Report the 0.25 s
   overhead with the latency results.
 
+### Condition B
+
+- **Top 5 by BM25, with schemas added to `tools` from the next request.** Identical schemas to A, and results are verbatim.
+
 ### Harness
+
+- **`tool_calls` counts real MCP calls only** in every condition. `search_tools`, `list_files`, `read_file` and `run_python` are excluded, and `model_turns` and `code_executions` cover them.
 
 - **`--approved` flag:** a non-dry run refuses to start without it. This is an addition to the spec, as a safeguard.
 - **Cached replays report original usage and latency,** so a resumed run reports true values.
