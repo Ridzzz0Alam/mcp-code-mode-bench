@@ -1,11 +1,11 @@
 {
   "sandbox_image": null,
-  "started": "2026-11-02T18:47:20.574894+00:00",
+  "started": "2026-11-02T18:47:54.026400+00:00",
   "models": [
-    "glm-5.3-flash"
+    "kimi-k2.7-code"
   ],
   "conditions": [
-    "B"
+    "A"
   ],
   "packages": {
     "openai": "3.42.1",
@@ -17,6 +17,8 @@
   },
   "python": "3.13.5",
   "data_seed": 20260315,
-  "git_commit": "eecf854996dc76c83a7cb95ece50b252faa53b93",
-  "temperature_dropped_for": []
+  "git_commit": "f4c34d298102150d1fcd748dc59c5ae50d0f52cd",
+  "temperature_dropped_for": [
+    "kimi-k2.7-code"
+  ]
 }
