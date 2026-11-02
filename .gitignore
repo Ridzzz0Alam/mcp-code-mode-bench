@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Request cache
+cache/*
+!cache/.gitkeep
+
+# Generated data (the generator itself is tracked)
+data/*
+!data/.gitkeep
+!data/generate.py
+
+# Run output
+results/runs*.jsonl
+results/dry_runs.jsonl

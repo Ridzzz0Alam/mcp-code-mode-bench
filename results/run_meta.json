@@ -1,0 +1,24 @@
+{
+  "sandbox_image": "sha256:037f705711fac3e319f543f1d414d156968850e16700f19bf9c0a1444b61e554",
+  "started": "2026-11-02T18:30:18.400251+00:00",
+  "models": [
+    "kimi-k2.7-code"
+  ],
+  "conditions": [
+    "C"
+  ],
+  "packages": {
+    "openai": "3.42.1",
+    "mcp": "2.3.0",
+    "pydantic": "2.14.2",
+    "pandas": "3.1.0",
+    "matplotlib": "3.11.2",
+    "rank-bm25": "0.2.2"
+  },
+  "python": "3.13.5",
+  "data_seed": 20260315,
+  "git_commit": null,
+  "temperature_dropped_for": [
+    "kimi-k2.7-code"
+  ]
+}
