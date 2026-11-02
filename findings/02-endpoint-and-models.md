@@ -23,7 +23,7 @@ are only frozen once the full run starts.
 | Model | Temperature 0 | Tool calls | `usage` returned | Cached token count |
 |---|---|---|---|---|
 | glm-5.3-flash | Accepted | Yes | Yes | Reported |
-| kimi-k2.7-code | **Rejected**, runs at its default | Yes | Yes | **Not reported**, on two runs |
+| kimi-k2.7-code | **Rejected**, runs at its default | Yes | Yes | **Not reported**, on every run so far |
 
 Consequences:
 - Compare conditions within each model. Comparing the two models directly is less clean, because only GLM is at temperature 0.
@@ -37,7 +37,10 @@ the spec. With Global enabled, DeepSeek may now work, but this has not been test
 
 - Go is $10/month, and Go Plus is $40/month.
 - Limits are monthly dollar amounts per model: 20% available per 5 hours, 50% per week, 100% per month.
-- Reaching a limit blocks paid models unless pay-as-you-go fallback is enabled.
+- On Go, both GLM-5.3-Flash and Kimi K2.7 Code have a $60 monthly limit, so $12 per 5 hours and $30 per week. On Go Plus it is $180.
+- Prices per 1M tokens: GLM-5.3-Flash $0.15 input, $0.50 output, $0.03 cached read. Kimi K2.7 Code $0.95, $4.00, $0.19.
+- The docs do not say when the 5-hour and weekly windows reset.
+- Pay-as-you-go fallback, when enabled, keeps requests going past the limits by spending your balance. This wording came from a page summary rather than the verbatim text, so confirm it in the console.
 
 ## Is this benchmark an allowed use?
 
