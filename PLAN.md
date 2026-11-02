@@ -17,8 +17,8 @@ If they conflict, the spec wins, except for the deviations listed in section 2.
 | M1 | Fake data, mock MCP servers, tool tests | Done |
 | M2 | 30 tasks, checkers, oracle solutions | Done, awaiting review |
 | M3 | Condition A, runner, cache, logging, dry run | Done. Models: `glm-5.3-flash`, `kimi-k2.7-code` |
-| M4 | Condition C, sandbox, dry run | Done, awaiting review |
-| M5 | Condition B, dry run of all three | Not started |
+| M4 | Condition C, sandbox, dry run | Done |
+| M5 | Condition B, dry run of all three | In progress |
 | M6 | Full run (needs cost approval), analysis, figures | Not started |
 
 M0 is small enough to do together with M1, with one review covering both.
