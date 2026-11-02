@@ -360,6 +360,11 @@ async def test_context_overflow_is_logged_as_failure(tmp_path: Path, base_dir: P
     assert row["success"] is False and row["error"] == "context_overflow"
 
 
+async def test_context_overflow_message_is_reported(tmp_path: Path, base_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    await runner.amain(args_for(), FakeClient(lambda _: status_error(400, "maximum context length exceeded")), tmp_path / "r", tmp_path / "c", base_dir)
+    assert "maximum context length exceeded" in capsys.readouterr().err
+
+
 async def test_harness_failure_is_logged_as_internal(tmp_path: Path, base_dir: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     def broken(_: Any) -> Exposure:
         raise RuntimeError("bug with sk-secret")
@@ -379,6 +384,37 @@ async def test_dry_run_uses_its_own_log_and_one_model(tmp_path: Path, base_dir: 
     assert [(r["model"], r["task_id"], r["trial"]) for r in rows] == [("m1", "L01", "dryrun")]
     output = capsys.readouterr().out
     assert "input tokens: 18,000" in output and "requests: 180" in output and "rough" in output
+
+
+async def test_dry_run_does_not_touch_the_run_metadata(tmp_path: Path, base_dir: Path) -> None:
+    await runner.amain(args_for(), FakeClient(answer_from_tools), tmp_path / "r", tmp_path / "c", base_dir)
+    before = (tmp_path / "r" / "run_meta.json").read_text()
+    await runner.amain(args_for(dry_run=True, approved=False, tasks="S05", models="other"), FakeClient(answer_from_tools), tmp_path / "r", tmp_path / "c", base_dir)
+    assert (tmp_path / "r" / "run_meta.json").read_text() == before
+    assert json.loads((tmp_path / "r" / "dry_run_meta.json").read_text())["models"] == ["other"]
+
+
+async def test_resumed_runs_keep_earlier_metadata(tmp_path: Path, base_dir: Path) -> None:
+    def rejects_temperature(kwargs: dict[str, Any]) -> Any:
+        return status_error(400, "temperature is not supported") if "temperature" in kwargs else answer_from_tools(kwargs)
+
+    await runner.amain(args_for(models="m1"), FakeClient(rejects_temperature), tmp_path / "r", tmp_path / "c", base_dir)
+    await runner.amain(args_for(models="m2", conditions="C"), FakeClient(lambda _: reply("<answer>x</answer>")), tmp_path / "r", tmp_path / "c", base_dir)
+    meta = json.loads((tmp_path / "r" / "run_meta.json").read_text())
+    assert meta["models"] == ["m1", "m2"] and meta["conditions"] == ["A", "C"]
+    assert meta["temperature_dropped_for"] == ["m1"]
+    assert len(meta["invocations"]) == 2 and meta["first_started"] == meta["invocations"][0]["started"]
+    assert meta["invocations"][0]["http_requests"] == 3 and meta["invocations"][0]["rows_written"] == 1
+    # The first invocation never used the sandbox, so the recorded image differs.
+    assert meta["environment_changed"] is True
+
+
+def test_environment_change_is_flagged() -> None:
+    run = {"started": "t", "models": ["m"], "conditions": ["A"], "sandbox_image": "i", "packages": {"mcp": "1"}, "python": "3", "git_commit": "a"}
+    same = runner.merge_meta(runner.merge_meta({}, run, set()), run, set())
+    assert same["environment_changed"] is False
+    changed = runner.merge_meta(same, {**run, "git_commit": "b"}, set())
+    assert changed["environment_changed"] is True and changed["git_commit"] == "b"
 
 
 async def test_full_run_needs_approval(tmp_path: Path, base_dir: Path) -> None:
